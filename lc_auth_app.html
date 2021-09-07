@@ -1,0 +1,307 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <base target="_top">
+    <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/4.6.1/firebase-ui-auth.css" />
+    <style type="text/css">
+        /* 'Open Sans' font from Google Fonts */
+        @import url(https://fonts.googleapis.com/css?family=Open+Sans:400,700);
+
+        body {
+            background: #456;
+            font-family: 'Open Sans', sans-serif;
+        }
+
+        .login {
+            /*width: 400px;*/
+            width: auto;
+            margin: 16px auto;
+            font-size: 16px;
+        }
+
+        /* Reset top and bottom margins from certain elements */
+        .login-header,
+        .login p {
+            margin-top: 0;
+            margin-bottom: 0;
+        }
+
+        /* The triangle form is achieved by a CSS hack */
+        .login-triangle {
+            width: 0;
+            margin-right: auto;
+            margin-left: auto;
+            border: 12px solid transparent;
+            border-bottom-color: #28d;
+        }
+
+        .login-header {
+            background: #28d;
+            padding: 20px;
+            font-size: 1.4em;
+            font-weight: normal;
+            text-align: center;
+            text-transform: uppercase;
+            color: #fff;
+        }
+
+        .login-container {
+            background: #ebebeb;
+            padding: 12px;
+        }
+
+        /* Every row inside .login-container is defined with p tags */
+        .login p {
+            padding: 12px;
+        }
+
+        .login button,
+        .login input {
+            box-sizing: border-box;
+            display: block;
+            width: 100%;
+            border-width: 1px;
+            border-style: solid;
+            padding: 16px;
+            outline: 0;
+            font-family: inherit;
+            font-size: 0.95em;
+        }
+
+        .login input[type="email"],
+        .login input[type="password"] {
+            background: #fff;
+            border-color: #bbb;
+            color: #555;
+        }
+
+        /* Text fields' focus effect */
+        .login input[type="email"]:focus,
+        .login input[type="password"]:focus {
+            border-color: #888;
+        }
+
+        .login button {
+            background: #28d;
+            border-color: transparent;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .login button:hover {
+            background: #17c;
+        }
+
+        /* Buttons' focus effect */
+        .login button:focus {
+            border-color: #05a;
+        }
+
+        /* ログインボタン非活性 */
+        .login button:disabled {
+            background: #ccc;
+        }
+
+        /* エラーメッセージ */
+        div.auth_error {
+            margin: 1em 0;
+            padding: 10px 10px 10px 35px;
+            border-width: 2px 0;
+            border-style: solid;
+            border-color: #ff009c;
+            color: #666;
+            background: #ffebef no-repeat 5px bottom;
+            font-size: 18px;
+            line-height: 1.5;
+        }
+
+        /* 認証成功メッセージ */
+        div.auth_success {
+            border-color: #0cc45f;
+            color: #666;
+            background: #c0e9c3 no-repeat 5px bottom;
+        }
+
+        /* ローディングアニメーション */
+        .spinner {
+            position: relative;
+            display: block;
+            width: 23px;
+            height: 23px;
+            top: 0px;
+            /* font-size: 0.95em; */
+            left: calc(50% - 17px);
+            background: transparent;
+            box-sizing: border-box;
+            border-top: 4px solid white;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-bottom: 4px solid transparent;
+            border-radius: 100%;
+            animation: spin 0.6s ease-out infinite;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg)
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login">
+        <div class="login-triangle"></div>
+
+        <h2 class="login-header">リベシティ認証</h2>
+
+        <form class="login-container">
+            <p><input type="email" placeholder="メールアドレス" id="email"></p>
+            <p><input type="password" placeholder="パスワード" id="password"></p>
+            <p><button class="button" id="authButton">認証</button></p>
+        </form>
+
+        <div class="auth_error" id="authResult" style="display: none;"></div>
+    </div>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/ui/4.6.1/firebase-ui-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.23.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.23.0/firebase-auth.js"></script>
+
+    <script>
+        $(function () {
+            // Firebaseの認証
+            var firebaseConfig = {
+                apiKey: "AIzaSyDxUFU2BiEQ1By3EKL8DL6IxoWgzutmR18",
+                authDomain: "production-b8884.firebaseapp.com",
+                projectId: "production-b8884",
+                storageBucket: "production-b8884.appspot.com",
+                messagingSenderId: "1085920862904",
+                appId: "1:1085920862904:web:1ff04dbfa6ff3b11b2ca4d",
+                measurementId: "G-VL9LNCK8QF"
+            };
+            firebase.initializeApp(firebaseConfig);
+
+            // 認証ボタンクリック時の動作設定
+            var authButton = document.getElementById("authButton");
+            authButton.addEventListener("click", authButtonClicked);
+
+            // 認証ボタンの活性・非活性制御
+            function toggleAuthButtonDisabled() {
+                authButton.disabled = !authButton.disabled;
+                var button = $('.button');
+
+                // ローディング表示の切り替え
+                if (!button.hasClass('loading')) {
+                    var tagSpinner = '<span class="spinner"></span>'
+                    button.toggleClass('loading').html(tagSpinner);
+                }
+                else {
+                    button.toggleClass('loading').html("認証");
+                }
+            }
+
+            // 認証エラーのメッセージ表示
+            function setErrorMessage(text) {
+                document.getElementById("authResult").innerText = text;
+                document.getElementById("authResult").style.display = "block";
+                document.getElementById("authResult").classList.remove("auth_success");
+            }
+            function setSucceedMessage(text) {
+                document.getElementById("authResult").innerText = text;
+                document.getElementById("authResult").style.display = "block";
+                document.getElementById("authResult").classList.add("auth_success");
+            }
+            function clearErrorMessage() {
+                document.getElementById("authResult").innerText = "";
+                document.getElementById("authResult").style.display = "none";
+            }
+
+            // 認証エラーのメッセージをローカライズ
+            function localiseErrorMessage(e) {
+
+                switch (e.code) {
+                    case "auth/cancelled-popup-request":
+                    case "auth/popup-closed-by-user":
+                        return e.message; // そのまま返す
+                    case "auth/email-already-in-use":
+                        return "メールアドレスまたはパスワードが違います";
+                    case "auth/invalid-email":
+                        return "メールアドレスの形式が正しくありません";
+                    case "auth/credential-already-in-use":
+                        return "この電話番号はすでに利用されています。";
+                    case "auth/invalid-verification-code":
+                        return "認証コードが正しくありません。";
+                    case "auth/user-disabled":
+                        return "サービスの利用が停止されています";
+                    case "auth/user-not-found":
+                        return "メールアドレスまたはパスワードが違います";
+                    case "auth/user-mismatch":
+                        return "メールアドレスまたはパスワードが違います";
+                    case "auth/weak-password":
+                        return "パスワードは6文字以上にしてください";
+                    case "auth/wrong-password":
+                        return "メールアドレスまたはパスワードが違います";
+                    case "auth/popup-blocked":
+                        return "認証ポップアップがブロックされました。ポップアップブロックをご利用の場合は設定を解除してください";
+                    case "auth/operation-not-supported-in-this-environment":
+                    case "auth/auth-domain-config-required":
+                    case "auth/operation-not-allowed":
+                    case "auth/unauthorized-domain":
+                        return "現在この認証方法はご利用頂けません";
+                    case "auth/requires-recent-login":
+                        return "認証の有効期限が切れています";
+                    default:
+                        return "認証に失敗しました。しばらく時間をおいて再度お試しください";
+                }
+            }
+
+            async function authButtonClicked() {
+                // 認証ボタンを非活性に
+                toggleAuthButtonDisabled();
+                clearErrorMessage();
+
+                // 認証が通るかどうかチェック
+                var email = document.getElementById("email").value;
+                var password = document.getElementById("password").value;
+                var userCredential = await firebase
+                    .auth()
+                    .signInWithEmailAndPassword(email, password)
+                    .catch(function (error) {
+                        toggleAuthButtonDisabled();
+                        setErrorMessage(localiseErrorMessage(error));
+                    });
+
+                if (userCredential) {
+                    // API呼び出し
+                    const doApi = async (token) => {
+                        const url = "https://us-central1-production-b8884.cloudfunctions.net/api-v1-canChat";
+
+                        const options = {
+                            headers: { 'Authorization': 'Bearer ' + token },
+                            muteHttpExceptions: true
+                        };
+                        const resp = await fetch(url, options);
+
+                        if (resp.status == 200) {
+                            toggleAuthButtonDisabled();
+                            setSucceedMessage("認証しました");
+                        }
+                        else {
+                            toggleAuthButtonDisabled();
+                            setErrorMessage("認証に失敗しました");
+                        }
+                    };
+
+                    // 利用可能なユーザーか判定
+                    doApi(await userCredential.user.getIdToken());
+                }
+            }
+        });
+    </script>
+
+</body>
+
+</html>
